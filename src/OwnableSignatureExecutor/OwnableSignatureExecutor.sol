@@ -18,6 +18,7 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
     using SentinelListLib for SentinelListLib.SentinelList;
 
     error InvalidNonce(uint256 nonce);
+    error InvalidTimestamp(uint48 validUntil, uint48 validAfter);
 
     /*//////////////////////////////////////////////////////////////////////////
                                      MODULE LOGIC
@@ -27,23 +28,33 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
      *
      * @param ownedAccount address of the account to execute the transaction on
      * @param nonce 2D Nonce (similar to ERC4337) to enable transaction ordering
+     * @param validAfter signature valid after timestamp
+     * @param validUntil signature valid until timestamp
      * @param callData encoded data containing the transaction to execute
-     * @param signature encoded signature of ownedAccount, msg.value, callData
+     * @param signature encoded signature of chainId, ownedAccount, nonce, validAfter, validUntil msg.value, callData
      */
     function executeOnOwnedAccount(
         address ownedAccount,
         uint256 nonce,
+        uint48 validAfter,
+        uint48 validUntil, 
         bytes calldata callData,
         bytes calldata signature
     )
         external
         payable
     {
+
+        if (block.timestamp > validUntil || block.timestamp < validAfter) {
+            revert InvalidTimestamp(validUntil, validAfter);   
+        }
+
         if (!_validateAndUpdateNonce(ownedAccount, nonce)) {
             revert InvalidNonce(nonce);
         }
 
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, block.chainid, nonce, msg.value, callData));
+
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(block.chainid, ownedAccount, nonce, validAfter, validUntil, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
@@ -62,23 +73,31 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
      *
      * @param ownedAccount address of the account to execute the transaction on
      * @param nonce 2D Nonce (similar to ERC4337) to enable transaction ordering
+     * @param validAfter signature valid after timestamp
+     * @param validUntil signature valid until timestamp
      * @param callData encoded data containing the transactions to execute
      * @param signature encoded signature of ownedAccount, msg.value, callData
      */
     function executeBatchOnOwnedAccount(
         address ownedAccount,
         uint256 nonce,
+        uint48 validAfter, 
+        uint48 validUntil,
         bytes calldata callData,
         bytes calldata signature
     )
         external
         payable
     {
+        if (block.timestamp > validUntil || block.timestamp < validAfter) {
+            revert InvalidTimestamp(validUntil, validAfter);   
+        }
+
         if (!_validateAndUpdateNonce(ownedAccount, nonce)) {
             revert InvalidNonce(nonce);
         }
 
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, block.chainid, nonce, msg.value, callData));
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(block.chainid, ownedAccount, nonce, validAfter, validUntil, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
