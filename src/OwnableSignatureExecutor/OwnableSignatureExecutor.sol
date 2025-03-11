@@ -16,12 +16,13 @@ import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
 contract OwnableSignatureExecutor is OwnableExecutor {
     using SentinelListLib for SentinelListLib.SentinelList;
 
+    error InvalidChainId(uint256 chainId, uint256 expected);
+
     /*//////////////////////////////////////////////////////////////////////////
                                      MODULE LOGIC
     //////////////////////////////////////////////////////////////////////////*/
 
     //TODO: Add nonce logic
-    //TODO: Add chainId replay protection logic
 
     /**
      * Executes a transaction on the owned account
@@ -32,13 +33,18 @@ contract OwnableSignatureExecutor is OwnableExecutor {
      */
     function executeOnOwnedAccount(
         address ownedAccount,
+        uint256 chainId,
         bytes calldata callData,
         bytes calldata signature
     )
         external
         payable
     {
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, msg.value, callData));
+        if (chainId != block.chainid) {
+            revert InvalidChainId(chainId, block.chainid);
+        }
+
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
@@ -61,13 +67,18 @@ contract OwnableSignatureExecutor is OwnableExecutor {
      */
     function executeBatchOnOwnedAccount(
         address ownedAccount,
+        uint256 chainId,
         bytes calldata callData,
         bytes calldata signature
     )
         external
         payable
     {
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, msg.value, callData));
+        if (chainId != block.chainid) {
+            revert InvalidChainId(chainId, block.chainid);
+        }
+
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
