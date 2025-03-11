@@ -26,6 +26,7 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
      * Executes a transaction on the owned account
      *
      * @param ownedAccount address of the account to execute the transaction on
+     * @param nonce 2D Nonce (similar to ERC4337) to enable transaction ordering
      * @param callData encoded data containing the transaction to execute
      * @param signature encoded signature of ownedAccount, msg.value, callData
      */
@@ -60,6 +61,7 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
      * Executes a batch of transactions on the owned account
      *
      * @param ownedAccount address of the account to execute the transaction on
+     * @param nonce 2D Nonce (similar to ERC4337) to enable transaction ordering
      * @param callData encoded data containing the transactions to execute
      * @param signature encoded signature of ownedAccount, msg.value, callData
      */
