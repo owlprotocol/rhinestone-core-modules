@@ -5,6 +5,7 @@ import { IERC7579Account } from "modulekit/accounts/common/interfaces/IERC7579Ac
 import { ECDSA } from "solady/utils/ECDSA.sol";
 import { ModeLib } from "modulekit/accounts/common/lib/ModeLib.sol";
 import { SentinelListLib } from "sentinellist/SentinelList.sol";
+import { NonceManager } from "@ERC4337/account-abstraction/contracts/core/NonceManager.sol";
 import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
 
 /**
@@ -13,17 +14,15 @@ import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
  * and pays for gas. Signature based transactions have their own internal shared nonce counter
  * @author Leo Vigna
  */
-contract OwnableSignatureExecutor is OwnableExecutor {
+contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
     using SentinelListLib for SentinelListLib.SentinelList;
 
     error InvalidChainId(uint256 chainId, uint256 expected);
+    error InvalidNonce(uint256 nonce);
 
     /*//////////////////////////////////////////////////////////////////////////
                                      MODULE LOGIC
     //////////////////////////////////////////////////////////////////////////*/
-
-    //TODO: Add nonce logic
-
     /**
      * Executes a transaction on the owned account
      *
@@ -34,6 +33,7 @@ contract OwnableSignatureExecutor is OwnableExecutor {
     function executeOnOwnedAccount(
         address ownedAccount,
         uint256 chainId,
+        uint256 nonce,
         bytes calldata callData,
         bytes calldata signature
     )
@@ -43,8 +43,11 @@ contract OwnableSignatureExecutor is OwnableExecutor {
         if (chainId != block.chainid) {
             revert InvalidChainId(chainId, block.chainid);
         }
+        if (!_validateAndUpdateNonce(ownedAccount, nonce)) {
+            revert InvalidNonce(nonce);
+        }
 
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, msg.value, callData));
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, nonce, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
@@ -68,6 +71,7 @@ contract OwnableSignatureExecutor is OwnableExecutor {
     function executeBatchOnOwnedAccount(
         address ownedAccount,
         uint256 chainId,
+        uint256 nonce,
         bytes calldata callData,
         bytes calldata signature
     )
@@ -77,8 +81,11 @@ contract OwnableSignatureExecutor is OwnableExecutor {
         if (chainId != block.chainid) {
             revert InvalidChainId(chainId, block.chainid);
         }
+        if (!_validateAndUpdateNonce(ownedAccount, nonce)) {
+            revert InvalidNonce(nonce);
+        }
 
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, msg.value, callData));
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, nonce, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
