@@ -10,8 +10,8 @@ import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
 
 /**
  * @title OwnableSignatureExecutor
- * @dev Module that allows users to designate an owner that can execute transactions on their behalf using msg.sender, EIP191, EIP712
- * and pays for gas. Signature based transactions have their own internal shared nonce counter
+ * @dev Module that allows users to designate an owner that can execute transactions on their behalf using msg.sender or EIP191 signatures,
+ * and pays for gas. Signature based transactions have their own internal shared nonce counter, validUntil and validAfter timestamps.
  * @author Leo Vigna
  */
 contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
