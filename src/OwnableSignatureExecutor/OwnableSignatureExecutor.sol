@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.25;
 
+import { IERC7579Account } from "modulekit/accounts/common/interfaces/IERC7579Account.sol";
+import { ECDSA } from "solady/utils/ECDSA.sol";
+import { ModeLib } from "modulekit/accounts/common/lib/ModeLib.sol";
+import { SentinelListLib } from "sentinellist/SentinelList.sol";
 import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
 
 /**
@@ -10,11 +14,72 @@ import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
  * @author Leo Vigna
  */
 contract OwnableSignatureExecutor is OwnableExecutor {
+    using SentinelListLib for SentinelListLib.SentinelList;
 
     /*//////////////////////////////////////////////////////////////////////////
                                      MODULE LOGIC
     //////////////////////////////////////////////////////////////////////////*/
 
+    //TODO: Add nonce logic
+    //TODO: Add chainId replay protection logic
+
+    /**
+     * Executes a transaction on the owned account
+     *
+     * @param ownedAccount address of the account to execute the transaction on
+     * @param callData encoded data containing the transaction to execute
+     * @param signature encoded signature of ownedAccount, msg.value, callData
+     */
+    function executeOnOwnedAccount(
+        address ownedAccount,
+        bytes calldata callData,
+        bytes calldata signature
+    )
+        external
+        payable
+    {
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, msg.value, callData));
+        address owner = ECDSA.recoverCalldata(execHash, signature);
+
+        // check if the signer is an owner
+        if (!accountOwners[ownedAccount].contains(owner)) {
+            revert UnauthorizedAccess();
+        }
+
+        // execute the transaction on the owned account
+        IERC7579Account(ownedAccount).executeFromExecutor{ value: msg.value }(
+            ModeLib.encodeSimpleSingle(), callData
+        );
+    }
+
+    /**
+     * Executes a batch of transactions on the owned account
+     *
+     * @param ownedAccount address of the account to execute the transaction on
+     * @param callData encoded data containing the transactions to execute
+     * @param signature encoded signature of ownedAccount, msg.value, callData
+     */
+    function executeBatchOnOwnedAccount(
+        address ownedAccount,
+        bytes calldata callData,
+        bytes calldata signature
+    )
+        external
+        payable
+    {
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, msg.value, callData));
+        address owner = ECDSA.recoverCalldata(execHash, signature);
+
+        // check if the signer is an owner
+        if (!accountOwners[ownedAccount].contains(owner)) {
+            revert UnauthorizedAccess();
+        }
+
+        // execute the batch of transaction on the owned account
+        IERC7579Account(ownedAccount).executeFromExecutor{ value: msg.value }(
+            ModeLib.encodeSimpleBatch(), callData
+        );
+    }
 
     /*//////////////////////////////////////////////////////////////////////////
                                      METADATA
