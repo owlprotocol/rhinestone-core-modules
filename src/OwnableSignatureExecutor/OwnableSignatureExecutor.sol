@@ -17,7 +17,6 @@ import { OwnableExecutor } from "../OwnableExecutor/OwnableExecutor.sol";
 contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
     using SentinelListLib for SentinelListLib.SentinelList;
 
-    error InvalidChainId(uint256 chainId, uint256 expected);
     error InvalidNonce(uint256 nonce);
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -32,7 +31,6 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
      */
     function executeOnOwnedAccount(
         address ownedAccount,
-        uint256 chainId,
         uint256 nonce,
         bytes calldata callData,
         bytes calldata signature
@@ -40,14 +38,11 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
         external
         payable
     {
-        if (chainId != block.chainid) {
-            revert InvalidChainId(chainId, block.chainid);
-        }
         if (!_validateAndUpdateNonce(ownedAccount, nonce)) {
             revert InvalidNonce(nonce);
         }
 
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, nonce, msg.value, callData));
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, block.chainid, nonce, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
@@ -70,7 +65,6 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
      */
     function executeBatchOnOwnedAccount(
         address ownedAccount,
-        uint256 chainId,
         uint256 nonce,
         bytes calldata callData,
         bytes calldata signature
@@ -78,14 +72,11 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
         external
         payable
     {
-        if (chainId != block.chainid) {
-            revert InvalidChainId(chainId, block.chainid);
-        }
         if (!_validateAndUpdateNonce(ownedAccount, nonce)) {
             revert InvalidNonce(nonce);
         }
 
-        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, chainId, nonce, msg.value, callData));
+        bytes32 execHash = ECDSA.toEthSignedMessageHash(abi.encode(ownedAccount, block.chainid, nonce, msg.value, callData));
         address owner = ECDSA.recoverCalldata(execHash, signature);
 
         // check if the signer is an owner
