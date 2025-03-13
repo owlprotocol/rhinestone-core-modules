@@ -20,16 +20,6 @@ contract OwnableSignatureExecutor is OwnableExecutor, NonceManager {
     error InvalidNonce(uint256 nonce);
     error InvalidTimestamp(uint48 validUntil, uint48 validAfter);
 
-    /**
-     * Returns whether address is owner using SentinelList.contains()
-     * Useful for external infra using the executor as source of truth
-     * @param ownedAccount address of the account to execute the transaction on
-     * @param owner address to check ownership on
-     */
-    function isOwner(address ownedAccount, address owner) external view returns (bool) {
-        return accountOwners[ownedAccount].contains(owner);
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                      MODULE LOGIC
     //////////////////////////////////////////////////////////////////////////*/
